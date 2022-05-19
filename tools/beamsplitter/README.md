@@ -64,7 +64,7 @@ language, but here are some of the highlights:
   the lexer as blobs.
 - Struct fields, class fields, and method arguments must have fairly simple types. e.g. they cannot
   have parentheses. If a type is C style callback, then it should be specified with an alias.
-- Multiline strings and macro definitions are illegal.
+- Multiline strings and macro definitions are not allowed.
 - Enum values must be sequential and cannot have custom values.
 - If the default value of a field is a vector, it must be in the form: `{ x, y, z }`.
 
@@ -72,7 +72,7 @@ The following formal grammar describes the above limitations in greater detail, 
 caveats:
 
 - All C preprocessor directives are discarded during lexical analysis; they do not exist in the AST.
-- Whitespace is similarly discarded, so there is no "space" concept in the eBNF.
+- Whitespace is similarly discarded, so there is no "space" concept in the AST.
 - Macro invocations are also removed by the lexer if they are known Filament-specific macros (e.g.
   `UTILS_PUBLIC` and `UTILS_DEPRECATED`).
 - Comments are removed by the lexer and are generally not part of the resulting AST. However
@@ -82,52 +82,62 @@ caveats:
 - Emitter flags in the form `%codegen_foo%` are detected in a post-processing phase and removed from
   all comments.
 
+### Grammar
+
 ```eBNF
 root = namespace ;
-namespace = "namespace" , [ident] , "{" , block , "}" ;
-block = { class | struct | enum | namespace } ;
-class = "class" , ident , [":" , ident ] , "{" , class_contents , "}" , ";" ;
-struct = "struct" , [ ident ] , "{" , class_contents , "}" , [ ident ] , ";" ;
-enum = "enum" , "class" , ident , [":" , type ] , "{" , enum_contents , "}" , ";" ;
-enum_contents = ident , { "," , ident } ;
-class_contents = "public" , ":"
-               | "private" , ":"
-               | "protected" , ":"
-               | "BlockCommentGroupBegin"
-               | "BlockCommentGroupEnd"
-               | "using" , ident , "=", type , ";"
-               | field
-               | method , ( ";" | "MethodBody" )
-               | { class | struct | enum } ;
+namespace = "namespace" , [ident] , "{" , { block } , "}" ;
+block = class | struct | enum | namespace | using | forward_declaration;
+forward_declaration = ("class" | "struct" ) , ident , ";" ;
+class = "class" , ident , [":" , ident ] , "{" , struct_body  , "}" , ";" ;
+struct = "struct" , [ ident ] , "{" , struct_body , "}" , [ ident ] , ";" ;
+enum = "enum" , "class" , ident , [":" , type ] , "{" ,
+    , ident , { "," , ident }
+    , [ "," ] , "}" , ";" ;
+using = "using" , ident , "=", type , ";" ;
+struct_body = { access_specifier
+    | grouping_delimiter
+    | field
+    | method
+    | block } ;
+access_specifier = ("public" | "private" | "protected" ) , ":" ;
+grouping_delimiter = "FieldGroupBegin" | "FieldGroupEnd" ;
+method = [ "template" , "TemplateArgs" ]
+    , type
+    , ident
+    , "MethodArgs"
+    , { "const" | "noexcept" }
+    , ( ";" | "MethodBody" ) ;
 field = type , ident , [ "=" , "DefaultValue" ] ";" ;
-method = [ template ] , type , ident , "MethodArgs" , ["const"] , ["noexcept"] ;
-template = "template" , "TemplateArgs" ;
 type = "SimpleType" ;
 ident = "Identifier" ;
 ```
 
 Terminal name               | Description
 --------------------------- | ----
-BlockCommentGroupBegin      | starts with `/**` and ends with `*/` and contains `@{`
-BlockCommentGroupEnd        | starts with `/**` and ends with `*/` and contains `@}`
+FieldGroupBegin             | starts with `/**` and ends with `*/` and contains `@{`
+FieldGroupEnd               | starts with `/**` and ends with `*/` and contains `@}`
 SimpleType (*)              | examples: `Texture* const`, `uint8_t`, `BlendMode`
-MethodBody                  | blob with the entire contents of an inlined method, including outermost `{}`
+MethodBody                  | unparsed implementation of a function or method, including outer `{}`
 MethodArgs                  | similar to above; an unparsed blob, but delimited with `()`
 TemplateArgs                | similar to above; an unparsed blob, but delimited with `<>`
 DefaultValue                | an unparsed expression with certain restrictions (see note about vectors)
 Identifier                  | `[A-Za-z_][A-Za-z0-9_]*`
 
-(*) `SimpleType` should not contain parentheses, commas, or template specializations.
-
-Note that the lexer needs to have some knowledge of the grammar, e.g. without context it
-cannot tell if a blob of text is an `Identifier` or a `DefaultValue`.
+(*) `SimpleType` should not contain parentheses or commas, so C callbacks are not allowed unless
+you alias them first. Template specializations must also be aliased.
 
 ## References
 
-The beamsplitter architecture was inspired by the following Rob Pike talk:
+Initially inspired by the following Rob Pike talk.
 - https://www.youtube.com/watch?v=HxaD_trXwRE
 
-Go's template lexer can be studied here:
+Beamsplitter does not use the state machine described in the above prezo, but it does use a channel
+for separating the parser from the lexer. The beamsplitter lexer is actually a recursive descent
+parser with simple lookahead functionality. This makes it easy for the "real" parser to create a
+coarse-grained AST.
+
+The companion to the above talk is Go's template lexer, which can be studied here:
 - https://cs.opensource.google/go/go/+/master:src/text/template/parse/lex.go
 
 Wikipedia has a good example of recursive descent:
