@@ -43,6 +43,8 @@ func main() {
 	log.SetPrefix(sourceFilename + ":")
 	root := findFilamentRoot()
 	sourcePath := filepath.Join(root, "filament", "include", "filament", sourceFilename)
+	//definitions := parse.OldParse(sourcePath)
+
 	definitions := parse.Parse(sourcePath)
 
 	// For diagnostic purposes, this dumps out the database that was gathered from

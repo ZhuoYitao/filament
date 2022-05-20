@@ -189,9 +189,11 @@ func parseEnum(lex *lexer) *EnumNode {
 	}
 	firstVal := expect(lex, itemIdentifier)
 	node := &EnumNode{
-		NodeType: NodeEnum,
-		Line:     Line(name.line),
-		Values:   []string{firstVal.val},
+		Name:       name.val,
+		NodeType:   NodeEnum,
+		Line:       Line(name.line),
+		Values:     []string{firstVal.val},
+		ValueLines: []Line{Line(firstVal.line)},
 	}
 	for item = lex.nextItem(); item.typ != itemCloseBrace; {
 		if item.typ != itemComma {
@@ -205,6 +207,7 @@ func parseEnum(lex *lexer) *EnumNode {
 			panic(lex, item)
 		}
 		node.Values = append(node.Values, item.val)
+		node.ValueLines = append(node.ValueLines, Line(item.line))
 		item = lex.nextItem()
 	}
 	expect(lex, itemSemicolon)
@@ -228,11 +231,23 @@ func parseNamespace(lex *lexer) *NamespaceNode {
 	expect(lex, itemOpenBrace)
 	ns := &NamespaceNode{NodeNamespace, Line(name.line), name.val, nil}
 	item := lex.nextItem()
+
+	// Filter out nil nodes (e.g. forward declarations)
+	// Note that checking for nil is tricky due to a classic Go gotcha.
 	append := func(child Node) {
-		if child != nil {
-			ns.Children = append(ns.Children, child)
+		switch concrete := child.(type) {
+		case *StructNode:
+			if concrete == nil {
+				return
+			}
+		case *ClassNode:
+			if concrete == nil {
+				return
+			}
 		}
+		ns.Children = append(ns.Children, child)
 	}
+
 	for ; item.typ != itemCloseBrace; item = lex.nextItem() {
 		switch item.typ {
 		case itemClass:
@@ -272,15 +287,33 @@ func panic(lex *lexer, unexpected item) {
 	log.Fatalf("%d: parser sees unexpected lexeme %s", unexpected.line, unexpected.String())
 }
 
-// Consumes a C++ header file and produces a type database.
 func Parse(sourcePath string) []TypeDefinition {
-	contents, err := os.ReadFile(sourcePath)
+	data, err := os.ReadFile(sourcePath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	lexer := createLexer(string(contents))
-	parseRoot(lexer)
+	contents := string(data)
+	lexer := createLexer(contents)
+	root := parseRoot(lexer)
 
+	// Gather all block-style comments.
+	context := parserContext{}
+	context.compileRegexps()
+
+	// Line numbers are 1-based in beamsplitter, so we add an extra newline at the top.
+	context.codelines = strings.Split("\n"+contents, "\n")
+	context.commentBlocks = gatherCommentBlocks(strings.NewReader(contents))
+
+	// Recurse into the AST using pre-order traversal, gathering type information along the way.
+	context.gatherTypeInfo(root.Child, "", nil)
+
+	context.addTypeQualifiers()
+
+	return context.definitions
+}
+
+// Consumes a C++ header file and produces a type database.
+func OldParse(sourcePath string) []TypeDefinition {
 	sourceFile, err := os.Open(sourcePath)
 	if err != nil {
 		log.Fatal(err)
@@ -373,6 +406,7 @@ type parserContext struct {
 	stack            []scope
 	insideComment    bool
 	commentBlocks    map[int]string
+	codelines        []string
 	cppTokenizer     *regexp.Regexp
 	floatMatcher     *regexp.Regexp
 	vectorMatcher    *regexp.Regexp
@@ -540,19 +574,94 @@ func (context parserContext) distillValue(cppvalue string, lineNumber int) strin
 			log.Fatalf("%d: vectors must have the form {x, y ...}", lineNumber)
 		}
 	}
-
-	if len(cppvalue) == 0 {
-		log.Fatalf("%d: empty value specified", lineNumber)
-	}
-
 	return cppvalue
 }
 
-func (context *parserContext) scanCppCodeline(codeline string, lineNumber int) {
-	if context.cppTokenizer == nil {
-		context.compileRegexps()
+func (context *parserContext) getDescription(line Line) string {
+	desc := context.commentBlocks[int(line)-1]
+	if desc == "" {
+		codeline := context.codelines[int(line)]
+		if matches := context.fieldDescParser.FindStringSubmatch(codeline); matches != nil {
+			desc = matches[1]
+		}
 	}
+	return context.customFlagFinder.ReplaceAllString(desc, "")
+}
 
+func (context *parserContext) getEmitterFlags(line Line) map[string]struct{} {
+	codeline := context.codelines[int(line)]
+	if matches := context.customFlagFinder.FindAllStringSubmatch(codeline, -1); matches != nil {
+		result := make(map[string]struct{}, len(matches))
+		for _, flag := range matches {
+			result[flag[1]] = struct{}{}
+		}
+		return result
+	}
+	return nil
+}
+
+// Search for all enums and structs and gather them into a flat list of type definitions.
+func (context *parserContext) gatherTypeInfo(node Node, prefix string, parent TypeDefinition) {
+	switch concrete := node.(type) {
+	case *NamespaceNode:
+		// HACK: filament namespace is a special case, remove it from the type database.
+		if concrete.Name != "filament" {
+			prefix = prefix + concrete.Name + "::"
+		}
+		for _, child := range concrete.Children {
+			context.gatherTypeInfo(child, prefix, parent)
+		}
+	case *EnumNode:
+		defn := &EnumDefinition{
+			name:        concrete.Name,
+			qualifier:   prefix,
+			Values:      make([]EnumValue, len(concrete.Values)),
+			Description: context.getDescription(concrete.Line),
+			parent:      parent,
+		}
+		for i, val := range concrete.Values {
+			defn.Values[i] = EnumValue{
+				Name:        val,
+				Description: context.getDescription(concrete.ValueLines[i]),
+			}
+		}
+		context.definitions = append(context.definitions, defn)
+	case *StructNode:
+		defn := &StructDefinition{
+			name:        concrete.Name,
+			qualifier:   prefix,
+			Fields:      make([]StructField, 0),
+			Description: context.getDescription(concrete.Line),
+			parent:      parent,
+		}
+		prefix = prefix + concrete.Name + "::"
+		for _, child := range concrete.Members {
+			switch member := child.(type) {
+			case *StructNode, *ClassNode, *EnumNode, *NamespaceNode:
+				context.gatherTypeInfo(child, prefix, defn)
+			case *FieldNode:
+				defn.Fields = append(defn.Fields, StructField{
+					TypeString:   member.FieldType,
+					Name:         member.Name,
+					DefaultValue: context.distillValue(member.Rhs, int(member.Line)),
+					Description:  context.getDescription(member.Line),
+					EmitterFlags: context.getEmitterFlags(member.Line),
+				})
+			}
+		}
+		context.definitions = append(context.definitions, defn)
+	case *ClassNode:
+		prefix = prefix + concrete.Name + "::"
+		for _, child := range concrete.Members {
+			switch child.(type) {
+			case *StructNode, *ClassNode, *EnumNode, *NamespaceNode:
+				context.gatherTypeInfo(child, prefix, parent)
+			}
+		}
+	}
+}
+
+func (context *parserContext) scanCppCodeline(codeline string, lineNumber int) {
 	// For "group begin" or "group end" comments inside a struct, emit a faux field.
 	commentBlock := context.commentBlocks[lineNumber]
 	if strings.Contains(commentBlock, "@{") || strings.Contains(commentBlock, "@}") {

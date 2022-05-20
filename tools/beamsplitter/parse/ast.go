@@ -104,8 +104,9 @@ type StructNode struct {
 type EnumNode struct {
 	NodeType
 	Line
-	Name   string
-	Values []string
+	Name       string
+	Values     []string
+	ValueLines []Line // used to find docstring for each enum value
 }
 
 type UsingNode struct {
