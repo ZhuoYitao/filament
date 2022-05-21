@@ -18,50 +18,30 @@ package parse
 
 type Node interface{}
 
-type NodeType int
-
-const (
-	NodeRoot NodeType = iota
-	NodeNamespace
-	NodeClass
-	NodeStruct
-	NodeEnum
-	NodeUsing
-	NodeAccessSpecifier
-	NodeGroupingDelimiter
-	NodeMethod
-	NodeField
-)
-
 type RootNode struct {
-	NodeType
 	Line  int
 	Child *NamespaceNode
 }
 
 type NamespaceNode struct {
-	NodeType
 	Line     int
 	Name     string
 	Children []Node
 }
 
 type ClassNode struct {
-	NodeType
 	Line    int
 	Name    string
 	Members []Node
 }
 
 type StructNode struct {
-	NodeType
 	Line    int
 	Name    string
 	Members []Node
 }
 
 type EnumNode struct {
-	NodeType
 	Line       int
 	Name       string
 	Values     []string
@@ -69,20 +49,17 @@ type EnumNode struct {
 }
 
 type UsingNode struct {
-	NodeType
 	Line int
 	Name string
 	Rhs  string
 }
 
 type AccessSpecifierNode struct {
-	NodeType
 	Line   int
 	Access string
 }
 
 type GroupingDelimiterNode struct {
-	NodeType
 	Line             int
 	DocString        string
 	OpeningDelimiter bool
@@ -90,7 +67,6 @@ type GroupingDelimiterNode struct {
 }
 
 type MethodNode struct {
-	NodeType
 	Line       int
 	Name       string
 	ReturnType string
@@ -100,7 +76,6 @@ type MethodNode struct {
 }
 
 type FieldNode struct {
-	NodeType
 	Line int
 	Name string
 	Type string

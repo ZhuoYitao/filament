@@ -40,7 +40,6 @@ func parseStructBody(lex *lexer) []Node {
 			item = lex.nextItem()
 		}
 		method := &MethodNode{
-			NodeType:   NodeMethod,
 			Line:       item.line,
 			Name:       name.val,
 			ReturnType: returns.val,
@@ -73,9 +72,8 @@ func parseStructBody(lex *lexer) []Node {
 		case item.val == "public", item.val == "private", item.val == "protected":
 			expect(lex, itemColon)
 			append(&AccessSpecifierNode{
-				NodeType: NodeAccessSpecifier,
-				Line:     item.line,
-				Access:   item.val,
+				Line:   item.line,
+				Access: item.val,
 			})
 		case item.typ == itemCloseBrace:
 			break
@@ -87,21 +85,19 @@ func parseStructBody(lex *lexer) []Node {
 				parseMethod(name, item, nextItem, false)
 			case itemSemicolon:
 				append(&FieldNode{
-					NodeType: NodeField,
-					Line:     item.line,
-					Name:     name.val,
-					Type:     item.val,
-					Rhs:      "",
+					Line: item.line,
+					Name: name.val,
+					Type: item.val,
+					Rhs:  "",
 				})
 			case itemEquals:
 				rhs := expect(lex, itemDefaultValue)
 				expect(lex, itemSemicolon)
 				append(&FieldNode{
-					NodeType: NodeField,
-					Line:     item.line,
-					Name:     name.val,
-					Type:     item.val,
-					Rhs:      rhs.val,
+					Line: item.line,
+					Name: name.val,
+					Type: item.val,
+					Rhs:  rhs.val,
 				})
 			}
 		case item.typ == itemTemplate:
@@ -138,10 +134,9 @@ func parseClass(lex *lexer) *ClassNode {
 	expect(lex, itemCloseBrace)
 	expect(lex, itemSemicolon)
 	return &ClassNode{
-		NodeType: NodeClass,
-		Line:     name.line,
-		Name:     name.val,
-		Members:  members,
+		Line:    name.line,
+		Name:    name.val,
+		Members: members,
 	}
 }
 
@@ -160,10 +155,9 @@ func parseStruct(lex *lexer) *StructNode {
 	members := parseStructBody(lex)
 	expect(lex, itemSemicolon)
 	return &StructNode{
-		NodeType: NodeStruct,
-		Line:     name.line,
-		Name:     name.val,
-		Members:  members,
+		Line:    name.line,
+		Name:    name.val,
+		Members: members,
 	}
 }
 
@@ -183,7 +177,6 @@ func parseEnum(lex *lexer) *EnumNode {
 	firstVal := expect(lex, itemIdentifier)
 	node := &EnumNode{
 		Name:       name.val,
-		NodeType:   NodeEnum,
 		Line:       name.line,
 		Values:     []string{firstVal.val},
 		ValueLines: []int{firstVal.line},
@@ -214,7 +207,7 @@ func parseUsing(lex *lexer) *UsingNode {
 	expect(lex, itemEquals)
 	rhs := expect(lex, itemSimpleType)
 	expect(lex, itemSemicolon)
-	return &UsingNode{NodeUsing, name.line, name.val, rhs.val}
+	return &UsingNode{name.line, name.val, rhs.val}
 }
 
 // Assumes that we have just consumed the "namespace" keyword from the lexer.
@@ -222,7 +215,7 @@ func parseUsing(lex *lexer) *UsingNode {
 func parseNamespace(lex *lexer) *NamespaceNode {
 	name := expect(lex, itemIdentifier)
 	expect(lex, itemOpenBrace)
-	ns := &NamespaceNode{NodeNamespace, name.line, name.val, nil}
+	ns := &NamespaceNode{name.line, name.val, nil}
 	item := lex.nextItem()
 
 	// Filter out nil nodes (e.g. forward declarations)
@@ -263,7 +256,7 @@ func parseNamespace(lex *lexer) *NamespaceNode {
 func parseRoot(lex *lexer) *RootNode {
 	expect(lex, itemNamespace)
 	ns := parseNamespace(lex)
-	return &RootNode{NodeRoot, 0, ns}
+	return &RootNode{0, ns}
 }
 
 func expect(lex *lexer, expectedType itemType) item {
