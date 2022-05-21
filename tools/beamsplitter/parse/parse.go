@@ -421,27 +421,6 @@ func gatherCommentBlocks(sourceFile io.Reader) map[int]string {
 	return comments
 }
 
-func (context parserContext) generateQualifier() string {
-	qualifier := ""
-	for _, defn := range context.stack {
-		if defn.BaseName() != "" {
-			qualifier = qualifier + defn.BaseName() + "::"
-		}
-	}
-	return qualifier
-}
-
-func (context parserContext) findParent() TypeDefinition {
-	for i := len(context.stack) - 1; i >= 0; i-- {
-		switch defn := context.stack[i].(type) {
-		case *StructDefinition, *EnumDefinition:
-			var result TypeDefinition = defn
-			return result
-		}
-	}
-	return nil
-}
-
 // Annotates struct fields that have custom types (i.e. enums or structs).
 func (context parserContext) addTypeQualifiers() {
 	typeMap := make(map[string]TypeDefinition)
