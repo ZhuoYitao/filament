@@ -21,7 +21,6 @@ type Node interface {
 }
 
 type NodeType int
-type Line int
 
 func (t NodeType) Type() NodeType {
 	return t
@@ -42,55 +41,55 @@ const (
 
 type RootNode struct {
 	NodeType
-	Line
+	Line  int
 	Child *NamespaceNode
 }
 
 type NamespaceNode struct {
 	NodeType
-	Line
+	Line     int
 	Name     string
 	Children []Node
 }
 
 type ClassNode struct {
 	NodeType
-	Line
+	Line    int
 	Name    string
 	Members []Node
 }
 
 type StructNode struct {
 	NodeType
-	Line
+	Line    int
 	Name    string
 	Members []Node
 }
 
 type EnumNode struct {
 	NodeType
-	Line
+	Line       int
 	Name       string
 	Values     []string
-	ValueLines []Line // used to find docstring for each enum value
+	ValueLines []int // used to find docstring for each enum value
 }
 
 type UsingNode struct {
 	NodeType
-	Line
+	Line int
 	Name string
 	Rhs  string
 }
 
 type AccessSpecifierNode struct {
 	NodeType
-	Line
+	Line   int
 	Access string
 }
 
 type GroupingDelimiterNode struct {
 	NodeType
-	Line
+	Line             int
 	DocString        string
 	OpeningDelimiter bool
 	ClosingDelimiter bool
@@ -98,7 +97,7 @@ type GroupingDelimiterNode struct {
 
 type MethodNode struct {
 	NodeType
-	Line
+	Line       int
 	Name       string
 	ReturnType string
 	Arguments  string
@@ -108,8 +107,8 @@ type MethodNode struct {
 
 type FieldNode struct {
 	NodeType
-	Line
+	Line      int
 	Name      string
-	FieldType string
+	FieldType string // TODO: rename to Type
 	Rhs       string
 }
