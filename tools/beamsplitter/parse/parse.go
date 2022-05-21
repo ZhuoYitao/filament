@@ -315,7 +315,6 @@ type StructField struct {
 	Name         string
 	DefaultValue string
 	Description  string
-	LineNumber   int
 	EmitterFlags map[string]struct{}
 	CustomType   TypeDefinition
 }
@@ -371,13 +370,11 @@ func (defn generalScope) Parent() TypeDefinition { return nil }
 type parserContext struct {
 	definitions      []TypeDefinition
 	stack            []scope
-	insideComment    bool
 	commentBlocks    map[int]string
 	codelines        []string
 	floatMatcher     *regexp.Regexp
 	vectorMatcher    *regexp.Regexp
-	fieldParser      *regexp.Regexp
-	fieldDescParser  *regexp.Regexp
+	fieldDocParser   *regexp.Regexp
 	customFlagFinder *regexp.Regexp
 }
 
@@ -386,7 +383,7 @@ func (context *parserContext) compileRegexps() {
 	context.floatMatcher = regexp.MustCompile(`(\-?[0-9]+\.[0-9]*)f?`)
 	context.vectorMatcher = regexp.MustCompile(`\{(\s*\-?[0-9\.]+\s*(,\s*\-?[0-9\.]+\s*){1,})\}`)
 	context.customFlagFinder = regexp.MustCompile(`\s*\%codegen_([a-zA-Z0-9_]+)\%\s*`)
-	context.fieldDescParser = regexp.MustCompile(`(?://\s*\!\<\s*(.*))`)
+	context.fieldDocParser = regexp.MustCompile(`(?://\s*\!\<\s*(.*))`)
 }
 
 // Creates a mapping from line numbers to strings, where the strings are entire block comments
@@ -538,7 +535,7 @@ func (context *parserContext) getDescription(line Line) string {
 	desc := context.commentBlocks[int(line)-1]
 	if desc == "" {
 		codeline := context.codelines[int(line)]
-		if matches := context.fieldDescParser.FindStringSubmatch(codeline); matches != nil {
+		if matches := context.fieldDocParser.FindStringSubmatch(codeline); matches != nil {
 			desc = matches[1]
 		}
 	}
