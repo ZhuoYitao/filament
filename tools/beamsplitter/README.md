@@ -90,7 +90,7 @@ namespace = "namespace" , [ident] , "{" , { block } , "}" ;
 block = class | struct | enum | namespace | using | forward_declaration;
 forward_declaration = ("class" | "struct" ) , ident , ";" ;
 class = "class" , ident , [":" , ident ] , "{" , struct_body  , "}" , ";" ;
-struct = "struct" , [ ident ] , "{" , struct_body , "}" , [ ident ] , ";" ;
+struct = "struct" , ident , "{" , struct_body , "}" , ";" ;
 enum = "enum" , "class" , ident , [":" , type ] , "{" ,
     , ident , { "," , ident }
     , [ "," ] , "}" , ";" ;

@@ -530,9 +530,6 @@ func lexStruct(lex *lexer) error {
 		return err
 	}
 	lex.emit(itemCloseBrace)
-	if lex.acceptIdentifier() {
-		lex.emit(itemIdentifier)
-	}
 	if !lex.acceptRune(';') {
 		return errors.New("; after struct body")
 	}

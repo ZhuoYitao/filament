@@ -96,9 +96,8 @@ type ClassNode struct {
 type StructNode struct {
 	NodeType
 	Line
-	Name         string
-	Members      []Node
-	InstanceName string
+	Name    string
+	Members []Node
 }
 
 type EnumNode struct {

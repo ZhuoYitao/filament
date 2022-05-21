@@ -157,20 +157,12 @@ func parseStruct(lex *lexer) *StructNode {
 		panic(lex, item)
 	}
 	members := parseStructBody(lex)
-	item = lex.nextItem()
-	instanceName := ""
-	if item.typ == itemIdentifier {
-		instanceName = item.val
-		expect(lex, itemSemicolon)
-	} else if item.typ != itemSemicolon {
-		panic(lex, item)
-	}
+	expect(lex, itemSemicolon)
 	return &StructNode{
-		NodeType:     NodeStruct,
-		Line:         Line(name.line),
-		Name:         name.val,
-		Members:      members,
-		InstanceName: instanceName,
+		NodeType: NodeStruct,
+		Line:     Line(name.line),
+		Name:     name.val,
+		Members:  members,
 	}
 }
 
