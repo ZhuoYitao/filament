@@ -19,7 +19,6 @@ package parse
 type Node interface {
 	Type() NodeType
 	LineNumber() Line
-	String() string
 }
 
 type NodeType int
@@ -31,33 +30,6 @@ func (t NodeType) Type() NodeType {
 
 func (line Line) LineNumber() Line {
 	return line
-}
-
-func (t NodeType) String() string {
-	switch t {
-	case NodeRoot:
-		return "Root"
-	case NodeNamespace:
-		return "Namespace"
-	case NodeClass:
-		return "Class"
-	case NodeStruct:
-		return "Struct"
-	case NodeEnum:
-		return "Enum"
-	case NodeUsing:
-		return "Using"
-	case NodeAccessSpecifier:
-		return "AccessSpecifier"
-	case NodeGroupingDelimiter:
-		return "GroupingDelimiter"
-	case NodeMethod:
-		return "Method"
-	case NodeField:
-		return "Field"
-	default:
-		return "Invalid"
-	}
 }
 
 const (
