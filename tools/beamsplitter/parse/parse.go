@@ -386,14 +386,6 @@ func (context *parserContext) compileRegexps() {
 	context.floatMatcher = regexp.MustCompile(`(\-?[0-9]+\.[0-9]*)f?`)
 	context.vectorMatcher = regexp.MustCompile(`\{(\s*\-?[0-9\.]+\s*(,\s*\-?[0-9\.]+\s*){1,})\}`)
 	context.customFlagFinder = regexp.MustCompile(`\s*\%codegen_([a-zA-Z0-9_]+)\%\s*`)
-
-	const kFieldType = `(?P<type>.*)`
-	const kFieldName = `(?P<name>[A-Za-z0-9_]+)`
-	const kFieldValue = `(?P<value>(.*?))`
-	const kFieldDesc = `(?://\s*\!\<\s*(?P<description>.*))?`
-	context.fieldParser = regexp.MustCompile(
-		`^\s*` + kFieldType + `\s+` + kFieldName + `\s*=\s*` + kFieldValue + `\s*;\s*` + kFieldDesc)
-
 	context.fieldDescParser = regexp.MustCompile(`(?://\s*\!\<\s*(.*))`)
 }
 
