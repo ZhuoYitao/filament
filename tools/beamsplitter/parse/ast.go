@@ -18,7 +18,6 @@ package parse
 
 type Node interface {
 	Type() NodeType
-	LineNumber() Line
 }
 
 type NodeType int
@@ -26,10 +25,6 @@ type Line int
 
 func (t NodeType) Type() NodeType {
 	return t
-}
-
-func (line Line) LineNumber() Line {
-	return line
 }
 
 const (
