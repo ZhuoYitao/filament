@@ -17,6 +17,7 @@
 package main
 
 import (
+	db "beamsplitter/database"
 	"bufio"
 	"fmt"
 	"log"
@@ -28,7 +29,7 @@ import (
 
 // Returns a templating function that automatically checks for fatal errors. The returned function
 // takes an output stream, a template name to invoke, and a template context object.
-func createJsCodeGenerator(namespace string) func(*os.File, string /*parse.*/, TypeDefinition) {
+func createJsCodeGenerator(namespace string) func(*os.File, string, db.TypeDefinition) {
 	jsPrefix := ""
 	classPrefix := ""
 	cppPrefix := ""
@@ -49,7 +50,7 @@ func createJsCodeGenerator(namespace string) func(*os.File, string /*parse.*/, T
 			typename = strings.ReplaceAll(typename, "::", "$")
 			return typename
 		},
-		"flag": func(field * /*parse.*/ StructField, flag string) bool {
+		"flag": func(field *db.StructField, flag string) bool {
 			_, exists := field.EmitterFlags[flag]
 			return exists
 		},
@@ -81,7 +82,7 @@ func createJsCodeGenerator(namespace string) func(*os.File, string /*parse.*/, T
 		"jsprefix":    func() string { return jsPrefix },
 		"cprefix":     func() string { return cppPrefix },
 		"classprefix": func() string { return classPrefix },
-		"docblock": func(defn /*parse.*/ Documented, depth int) string {
+		"docblock": func(defn db.Documented, depth int) string {
 			doc := defn.GetDoc()
 			if doc == "" {
 				return ""
@@ -96,7 +97,7 @@ func createJsCodeGenerator(namespace string) func(*os.File, string /*parse.*/, T
 
 	templ := template.New("beamsplitter").Funcs(customExtensions)
 	templ = template.Must(templ.ParseFiles("javascript.template"))
-	return func(file *os.File, section string, definition /*parse.*/ TypeDefinition) {
+	return func(file *os.File, section string, definition db.TypeDefinition) {
 		err := templ.ExecuteTemplate(file, section, definition)
 		if err != nil {
 			log.Fatal(err.Error())
@@ -104,7 +105,7 @@ func createJsCodeGenerator(namespace string) func(*os.File, string /*parse.*/, T
 	}
 }
 
-func emitJavaScript(definitions [] /*parse.*/ TypeDefinition, namespace string, outputFolder string) {
+func emitJavaScript(definitions []db.TypeDefinition, namespace string, outputFolder string) {
 	generate := createJsCodeGenerator(namespace)
 	{
 		path := filepath.Join(outputFolder, "jsbindings_generated.cpp")
@@ -119,7 +120,7 @@ func emitJavaScript(definitions [] /*parse.*/ TypeDefinition, namespace string, 
 
 		for _, definition := range definitions {
 			switch definition.(type) {
-			case * /*parse.*/ StructDefinition:
+			case *db.StructDefinition:
 				generate(file, "JsBindingsStruct", definition)
 			}
 		}
@@ -138,7 +139,7 @@ func emitJavaScript(definitions [] /*parse.*/ TypeDefinition, namespace string, 
 
 		for _, definition := range definitions {
 			switch definition.(type) {
-			case * /*parse.*/ EnumDefinition:
+			case *db.EnumDefinition:
 				generate(file, "JsEnum", definition)
 			}
 		}
@@ -158,7 +159,7 @@ func emitJavaScript(definitions [] /*parse.*/ TypeDefinition, namespace string, 
 
 		for _, definition := range definitions {
 			switch definition.(type) {
-			case * /*parse.*/ StructDefinition:
+			case *db.StructDefinition:
 				generate(file, "JsExtension", definition)
 			}
 		}
@@ -166,7 +167,7 @@ func emitJavaScript(definitions [] /*parse.*/ TypeDefinition, namespace string, 
 	}
 }
 
-func editTypeScript(definitions [] /*parse.*/ TypeDefinition, namespace string, folder string) {
+func editTypeScript(definitions []db.TypeDefinition, namespace string, folder string) {
 	path := filepath.Join(folder, "filament.d.ts")
 	var codelines []string
 	{
@@ -206,9 +207,9 @@ func editTypeScript(definitions [] /*parse.*/ TypeDefinition, namespace string, 
 	generate := createJsCodeGenerator(namespace)
 	for _, definition := range definitions {
 		switch definition.(type) {
-		case * /*parse.*/ StructDefinition:
+		case *db.StructDefinition:
 			generate(file, "TsStruct", definition)
-		case * /*parse.*/ EnumDefinition:
+		case *db.EnumDefinition:
 			generate(file, "TsEnum", definition)
 		}
 	}

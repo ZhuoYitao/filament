@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package database
 
 import (
 	"beamsplitter/parse"
@@ -25,7 +25,7 @@ import (
 	"strings"
 )
 
-func createTypeDatabase(root *parse.RootNode, contents string) []TypeDefinition {
+func Create(root *parse.RootNode, contents string) []TypeDefinition {
 	context := gatherContext{}
 	context.compileRegexps()
 

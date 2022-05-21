@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	db "beamsplitter/database"
 	"beamsplitter/parse"
 )
 
@@ -51,7 +52,7 @@ func main() {
 
 	contents := string(data)
 	ast := parse.Parse(contents)
-	definitions := createTypeDatabase(ast, contents)
+	definitions := db.Create(ast, contents)
 
 	emitSerializer(definitions, filepath.Join(root, "libs", "viewer", "src"))
 
