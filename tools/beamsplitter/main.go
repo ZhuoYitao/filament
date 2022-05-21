@@ -43,28 +43,15 @@ func main() {
 	log.SetPrefix(sourceFilename + ":")
 	root := findFilamentRoot()
 	sourcePath := filepath.Join(root, "filament", "include", "filament", sourceFilename)
-	//definitions := parse.OldParse(sourcePath)
 
-	definitions := parse.Parse(sourcePath)
-
-	// For diagnostic purposes, this dumps out the database that was gathered from
-	// the parsing phase.
-	if len(os.Args) > 1 && os.Args[1] == "--verbose" {
-		for _, defn := range definitions {
-			switch concrete := defn.(type) {
-			case *parse.StructDefinition:
-				fmt.Println("STRUCT:", concrete.QualifiedName())
-				for _, field := range concrete.Fields {
-					fmt.Println("\t", field.TypeString, "...", field.Name, "...", field.DefaultValue)
-				}
-			case *parse.EnumDefinition:
-				fmt.Println("  ENUM:", concrete.QualifiedName())
-				for _, value := range concrete.Values {
-					fmt.Println("\t", value)
-				}
-			}
-		}
+	data, err := os.ReadFile(sourcePath)
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	contents := string(data)
+	ast := parse.Parse(contents)
+	definitions := createTypeDatabase(ast, contents)
 
 	emitSerializer(definitions, filepath.Join(root, "libs", "viewer", "src"))
 

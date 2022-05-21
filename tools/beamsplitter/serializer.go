@@ -17,7 +17,6 @@
 package main
 
 import (
-	"beamsplitter/parse"
 	"fmt"
 	"log"
 	"os"
@@ -25,7 +24,7 @@ import (
 	"text/template"
 )
 
-func emitSerializer(definitions []parse.TypeDefinition, outputFolder string) {
+func emitSerializer(definitions [] /*parse.*/ TypeDefinition, outputFolder string) {
 	// The following template extensions make it possible to generate valid C++ code with
 	// fewer if-then-else blocks in the template file.
 	customExtensions := template.FuncMap{
@@ -35,7 +34,7 @@ func emitSerializer(definitions []parse.TypeDefinition, outputFolder string) {
 			}
 			return ","
 		},
-		"flag": func(field *parse.StructField, flag string) bool {
+		"flag": func(field * /*parse.*/ StructField, flag string) bool {
 			_, exists := field.EmitterFlags[flag]
 			return exists
 		},
@@ -65,7 +64,7 @@ func emitSerializer(definitions []parse.TypeDefinition, outputFolder string) {
 	codegen := template.New("beamsplitter").Funcs(customExtensions)
 	codegen = template.Must(codegen.ParseFiles("serializer.template"))
 
-	generate := func(file *os.File, section string, definition parse.TypeDefinition) {
+	generate := func(file *os.File, section string, definition /*parse.*/ TypeDefinition) {
 		err := codegen.ExecuteTemplate(file, section, definition)
 		if err != nil {
 			log.Fatal(err.Error())
@@ -83,10 +82,10 @@ func emitSerializer(definitions []parse.TypeDefinition, outputFolder string) {
 		generate(file, "CppHeader", nil)
 		for _, definition := range definitions {
 			switch definition.(type) {
-			case *parse.StructDefinition:
+			case * /*parse.*/ StructDefinition:
 				generate(file, "CppStructReader", definition)
 				generate(file, "CppStructWriter", definition)
-			case *parse.EnumDefinition:
+			case * /*parse.*/ EnumDefinition:
 				generate(file, "CppEnumReader", definition)
 				generate(file, "CppEnumWriter", definition)
 			}
@@ -104,9 +103,9 @@ func emitSerializer(definitions []parse.TypeDefinition, outputFolder string) {
 		generate(file, "HppHeader", nil)
 		for _, definition := range definitions {
 			switch definition.(type) {
-			case *parse.StructDefinition:
+			case * /*parse.*/ StructDefinition:
 				generate(file, "HppStruct", definition)
-			case *parse.EnumDefinition:
+			case * /*parse.*/ EnumDefinition:
 				generate(file, "HppEnum", definition)
 			}
 		}
