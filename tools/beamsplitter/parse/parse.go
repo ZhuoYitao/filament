@@ -304,31 +304,6 @@ func Parse(sourcePath string) []TypeDefinition {
 	return context.definitions
 }
 
-// Consumes a C++ header file and produces a type database.
-func OldParse(sourcePath string) []TypeDefinition {
-	sourceFile, err := os.Open(sourcePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer sourceFile.Close()
-
-	// In the first pass, gather all block-style comments.
-	context := parserContext{}
-	context.commentBlocks = gatherCommentBlocks(sourceFile)
-	sourceFile.Seek(0, 0)
-
-	// In the second pass, pry apart each C++ codeline.
-	lineScanner := bufio.NewScanner(sourceFile)
-	for lineNumber := 1; lineScanner.Scan(); lineNumber++ {
-		context.scanCppCodeline(lineScanner.Text(), lineNumber)
-	}
-	if err := lineScanner.Err(); err != nil {
-		log.Fatal(err)
-	}
-	context.addTypeQualifiers()
-	return context.definitions
-}
-
 type TypeDefinition interface {
 	BaseName() string
 	QualifiedName() string
@@ -399,7 +374,6 @@ type parserContext struct {
 	insideComment    bool
 	commentBlocks    map[int]string
 	codelines        []string
-	cppTokenizer     *regexp.Regexp
 	floatMatcher     *regexp.Regexp
 	vectorMatcher    *regexp.Regexp
 	fieldParser      *regexp.Regexp
@@ -409,7 +383,6 @@ type parserContext struct {
 
 // https://github.com/google/re2/wiki/Syntax
 func (context *parserContext) compileRegexps() {
-	context.cppTokenizer = regexp.MustCompile(`((?:/\*)|(?:\*/)|(?:;)|(?://)|(?:\})|(?:\{))`)
 	context.floatMatcher = regexp.MustCompile(`(\-?[0-9]+\.[0-9]*)f?`)
 	context.vectorMatcher = regexp.MustCompile(`\{(\s*\-?[0-9\.]+\s*(,\s*\-?[0-9\.]+\s*){1,})\}`)
 	context.customFlagFinder = regexp.MustCompile(`\s*\%codegen_([a-zA-Z0-9_]+)\%\s*`)
@@ -667,7 +640,6 @@ func (context *parserContext) scanCppCodeline(codeline string, lineNumber int) {
 		}
 	}
 
-	codeline = context.cppTokenizer.ReplaceAllString(codeline, " $1 ")
 	scanner := bufio.NewScanner(strings.NewReader(codeline))
 	scanner.Split(bufio.ScanWords)
 	inPlaceDefinition := ""
