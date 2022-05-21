@@ -16,15 +16,9 @@
 
 package parse
 
-type Node interface {
-	Type() NodeType
-}
+type Node interface{}
 
 type NodeType int
-
-func (t NodeType) Type() NodeType {
-	return t
-}
 
 const (
 	NodeRoot NodeType = iota
@@ -107,8 +101,8 @@ type MethodNode struct {
 
 type FieldNode struct {
 	NodeType
-	Line      int
-	Name      string
-	FieldType string // TODO: rename to Type
-	Rhs       string
+	Line int
+	Name string
+	Type string
+	Rhs  string
 }

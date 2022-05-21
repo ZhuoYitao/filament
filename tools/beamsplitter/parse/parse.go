@@ -87,21 +87,21 @@ func parseStructBody(lex *lexer) []Node {
 				parseMethod(name, item, nextItem, false)
 			case itemSemicolon:
 				append(&FieldNode{
-					NodeType:  NodeField,
-					Line:      item.line,
-					Name:      name.val,
-					FieldType: item.val,
-					Rhs:       "",
+					NodeType: NodeField,
+					Line:     item.line,
+					Name:     name.val,
+					Type:     item.val,
+					Rhs:      "",
 				})
 			case itemEquals:
 				rhs := expect(lex, itemDefaultValue)
 				expect(lex, itemSemicolon)
 				append(&FieldNode{
-					NodeType:  NodeField,
-					Line:      item.line,
-					Name:      name.val,
-					FieldType: item.val,
-					Rhs:       rhs.val,
+					NodeType: NodeField,
+					Line:     item.line,
+					Name:     name.val,
+					Type:     item.val,
+					Rhs:      rhs.val,
 				})
 			}
 		case item.typ == itemTemplate:

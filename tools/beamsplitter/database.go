@@ -311,7 +311,7 @@ func (context *gatherContext) gatherTypeDefinitions(node parse.Node, prefix stri
 				context.gatherTypeDefinitions(child, prefix, defn)
 			case *parse.FieldNode:
 				defn.Fields = append(defn.Fields, StructField{
-					TypeString:   member.FieldType,
+					TypeString:   member.Type,
 					Name:         member.Name,
 					DefaultValue: context.distillValue(member.Rhs, int(member.Line)),
 					Description:  context.getDescription(int(member.Line)),
